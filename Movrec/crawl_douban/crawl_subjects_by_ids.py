@@ -198,7 +198,7 @@ def main():
     rows = []
 
     for sid in ids[:20]: 
-      url = f"https://movie.douban.com/subject/{sid}/"
+        url = f"https://movie.douban.com/subject/{sid}/"
     try:
         soup = get_soup(sess, url)
         info = parse_subject_page(soup)
