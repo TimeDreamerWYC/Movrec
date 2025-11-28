@@ -1,0 +1,266 @@
+<!-- templates/movie_detail_douban.html - Douban Style Layout -->
+{% extends "base.html" %}
+
+{% block title %}{{ movie.NAME or "电影详情" }}{% endblock %}
+
+{% block content %}
+<div class="container movie-detail-container mt-4">
+    <!-- 主标题 -->
+    <h1 class="movie-title">{{ movie.NAME }} 
+        {% if movie.YEAR %}<small class="text-muted">({{ movie.YEAR|int }})</small>{% endif %}
+    </h1>
+    {% if movie.MOVIE_ID %}
+    <p><a href="https://movie.douban.com/subject/{{ movie.MOVIE_ID }}/?_dtcc=1" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">在豆瓣查看</a></p>
+    {% endif %}
+
+    <!-- 主内容区：左侧海报 + 右侧信息卡 -->
+    <div class="row">
+        <!-- 左侧：海报区 -->
+        <div class="col-md-3">
+            <img src="{{ poster_url(movie) }}" alt="{{ movie.NAME }}" class="img-fluid rounded shadow-sm" style="max-width: 100%; max-height: 500px; object-fit: cover;">
+        </div>
+
+        <!-- 右侧：电影信息卡 -->
+        <div class="col-md-9">
+            <!-- 评分区（突出） -->
+            <div class="rating-section mb-4">
+                {% if movie.DOUBAN_SCORE %}
+                    <div class="rating-score">
+                        <span class="score-number">{{ movie.DOUBAN_SCORE }}</span>
+                        <span class="score-unit">/ 10</span>
+                    </div>
+                {% else %}
+                    <p class="text-muted">暂无评分</p>
+                {% endif %}
+            </div>
+
+            <!-- 基本信息 -->
+            <div class="info-section">
+                {% set director = movie.get('DIRECTORS') or movie.get('directors') or movie.get('DIRECTOR') or '未知' %}
+                {% set actors = movie.get('ACTORS') or movie.get('actors') or movie.get('CAST') or '未知' %}
+                {% set genres = movie.get('GENRES') or movie.get('genres') or movie.get('LABEL') or '未知' %}
+
+                <p class="info-row">
+                    <span class="info-label">导演</span>
+                    <span class="info-value">{{ director }}</span>
+                </p>
+
+                {% if actors != '未知' %}
+                <p class="info-row">
+                    <span class="info-label">主演</span>
+                    <span class="info-value">{{ actors }}</span>
+                </p>
+                {% endif %}
+
+                {% if genres != '未知' %}
+                <p class="info-row">
+                    <span class="info-label">类型</span>
+                    <span class="info-value">{{ genres }}</span>
+                </p>
+                {% endif %}
+
+                {% if movie.get('REGIONS') or movie.get('countries') %}
+                <p class="info-row">
+                    <span class="info-label">国家</span>
+                    <span class="info-value">{{ movie.get('REGIONS') or movie.get('countries') }}</span>
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- 用户操作按钮区 -->
+            {% if current_user.is_authenticated %}
+            <div class="action-buttons mt-4">
+                <button id="like-btn" class="btn btn-custom me-2" data-action="like"
+                        style="{% if user_has_liked %}background-color: #10b981; color: white; border: none;{% else %}background-color: #f0f0f0; color: #333; border: 1px solid #ddd;{% endif %}">
+                    <span class="button-icon">{% if user_has_liked %}✓{% else %}👍{% endif %}</span>
+                    <span class="button-text">{% if user_has_liked %}已喜欢{% else %}喜欢{% endif %}</span>
+                </button>
+                <button id="dislike-btn" class="btn btn-custom me-2" data-action="dislike"
+                        style="{% if user_has_disliked %}background-color: #ef4444; color: white; border: none;{% else %}background-color: #f0f0f0; color: #333; border: 1px solid #ddd;{% endif %}">
+                    <span class="button-icon">{% if user_has_disliked %}✗{% else %}👎{% endif %}</span>
+                    <span class="button-text">{% if user_has_disliked %}已不喜欢{% else %}不喜欢{% endif %}</span>
+                </button>
+            </div>
+            {% else %}
+                <p class="text-muted mt-3"><a href="{{ url_for('login') }}">登录</a> 后可以标记这部电影</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 简介部分 -->
+    <div class="row mt-5">
+        <div class="col-md-12">
+            <h3 class="section-title">简介</h3>
+            <div class="synopsis-section">
+                <p style="line-height: 1.8; color: #555; white-space: pre-wrap;">
+                    {{ movie.get('STORYLINE') or movie.get('INFO') or movie.get('PLOT_SUMMARY') or movie.get('DESCRIPTION') or '暂无简介' }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 排名标签（显示该电影优于多少百分比的同类型电影，最多 3 个） -->
+    {% if comparison_tags %}
+    <div class="row mt-5">
+        <div class="col-md-12">
+            <h3 class="section-title">评价排名</h3>
+            <div class="comparison-tags">
+                {% for tag in comparison_tags[:3] %}
+                <span class="badge comparison-badge">{{ tag }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const buttons = document.querySelectorAll('[data-action]');
+    const movieId = "{{ movie.MOVIE_ID }}";
+    const csrfToken = "{{ csrf_token() }}";
+
+    buttons.forEach(button => {
+        button.addEventListener('click', async function () {
+            const action = this.dataset.action;
+            const originalHTML = this.innerHTML;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>...';
+            this.disabled = true;
+
+            try {
+                const response = await fetch('{{ url_for("toggle_preference_optimized") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ movie_douban_id: movieId, action: action })
+                });
+
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+
+                const data = await response.json();
+                if (data.success) {
+                    updateButtonUI(data.new_status);
+                } else {
+                    alert('操作失败: ' + (data.error || '未知错误'));
+                    this.innerHTML = originalHTML;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('网络错误，请稍后重试');
+                this.innerHTML = originalHTML;
+            } finally {
+                this.disabled = false;
+            }
+        });
+    });
+
+    function updateButtonUI(newStatus) {
+        const likeBtn = document.getElementById('like-btn');
+        const dislikeBtn = document.getElementById('dislike-btn');
+
+        // 重置两个按钮
+        likeBtn.style.backgroundColor = '#f0f0f0';
+        likeBtn.style.color = '#333';
+        likeBtn.style.border = '1px solid #ddd';
+        likeBtn.innerHTML = '<span class="button-icon">👍</span><span class="button-text">喜欢</span>';
+
+        dislikeBtn.style.backgroundColor = '#f0f0f0';
+        dislikeBtn.style.color = '#333';
+        dislikeBtn.style.border = '1px solid #ddd';
+        dislikeBtn.innerHTML = '<span class="button-icon">👎</span><span class="button-text">不喜欢</span>';
+
+        if (newStatus === 'liked') {
+            likeBtn.style.backgroundColor = '#10b981';
+            likeBtn.style.color = 'white';
+            likeBtn.style.border = 'none';
+            likeBtn.innerHTML = '<span class="button-icon">✓</span><span class="button-text">已喜欢</span>';
+        } else if (newStatus === 'disliked') {
+            dislikeBtn.style.backgroundColor = '#ef4444';
+            dislikeBtn.style.color = 'white';
+            dislikeBtn.style.border = 'none';
+            dislikeBtn.innerHTML = '<span class="button-icon">✗</span><span class="button-text">已不喜欢</span>';
+        }
+    }
+});
+</script>
+
+<style>
+    .movie-detail-container {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .movie-title {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 1rem;
+    }
+
+    /* 评分区样式 */
+    .rating-section {
+        display: flex;
+        align-items: flex-start;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .rating-score {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+    }
+
+    .score-number {
+        font-size: 3rem;
+        font-weight: bold;
+        color: #f59e0b;
+        line-height: 1;
+    }
+
+    .score-unit {
+        font-size: 0.9rem;
+        color: #999;
+    }
+
+    /* 信息区样式 */
+    .info-section {
+        margin-top: 1.5rem;
+    }
+
+    .info-row {
+        display: flex;
+        margin-bottom: 0.8rem;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+
+    .info-label {
+        display: inline-block;
+        min-width: 70px;
+        font-weight: bold;
+        color: #333;
+        margin-right: 1rem;
+    }
+
+    .info-value {
+        flex: 1;
+        color: #666;
+        word-break: break-word;
+    }
+
+    /* 按钮区 */
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .btn-custom {
+        padding: 10px 24px;
+        border-radius: 4px;
+        font-weight: 500;
+created:true}

@@ -1,0 +1,29 @@
+# Bytecode
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Virtual env and env files
+venv/
+.env
+
+# Database
+instance/*.db
+
+# Model artifacts and caches
+*.h5
+model_cache.pkl
+
+# Logs
+logs/
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/

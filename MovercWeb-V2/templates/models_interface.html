@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}模型接口{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>三个模型交互界面</h2>
+  <p>在下方三个单元格分别输入你的查询（支持模糊匹配与自由输入），点击运行查看结果。</p>
+
+  <div class="row">
+    <div class="col-md-4">
+      <div class="card mb-4">
+        <div class="card-header">模型 1：内容相似度（recommand）</div>
+        <div class="card-body">
+          <div class="form-group">
+            <input id="m1-query" class="form-control" placeholder="输入电影名或关键词...">
+          </div>
+          <button id="m1-run" class="btn btn-primary">运行</button>
+          <div id="m1-results" class="mt-3"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card mb-4">
+        <div class="card-header">模型 2：增强个性化（enhanced_recommend_for_user）</div>
+        <div class="card-body">
+          <div class="form-group">
+            <input id="m2-query" class="form-control" placeholder="输入电影名或关键词...">
+          </div>
+          <button id="m2-run" class="btn btn-primary">运行</button>
+          <div id="m2-results" class="mt-3"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card mb-4">
+        <div class="card-header">模型 3：模糊搜索（名称 contains）</div>
+        <div class="card-body">
+          <div class="form-group">
+            <input id="m3-query" class="form-control" placeholder="输入电影名或部分片名...">
+          </div>
+          <button id="m3-run" class="btn btn-primary">运行</button>
+          <div id="m3-results" class="mt-3"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const csrfToken = "{{ csrf_token()() }}";
+function renderResults(container, results){
+  if(!results || results.length === 0){
+    container.innerHTML = '<p class="text-muted">无结果</p>';
+    return;
+  }
+  let html = '<ul class="list-group">';
+  for(const r of results){
+    const name = r.NAME || '未知';
+    const mid = r.MOVIE_ID || '';
+    const score = r.DOUBAN_SCORE || '';
+    const sim = r.SIMILARITY ? (' 相似度: ' + r.SIMILARITY) : '';
+    const link = mid ? `<a href="https://movie.douban.com/subject/${mid}/" target="_blank" rel="noopener">${name}</a>` : name;
+    html += `<li class="list-group-item">${link} <br/><small class="text-muted">评分: ${score}${sim}</small></li>`;
+  }
+  html += '</ul>';
+  container.innerHTML = html;
+}
+
+async function callModel(endpoint, query){
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken, 'X-CSRF-Token': csrfToken},
+    body: JSON.stringify({query})
+  });
+  if(!res.ok){
+    const ct = res.headers.get('content-type') || '';
+    if(ct.indexOf('application/json') !== -1){
+      const j = await res.json();
+      throw new Error(j.error || ('HTTP ' + res.status));
+    }
+    throw new Error('HTTP ' + res.status);
+  }
+  return res.json();
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('m1-run').addEventListener('click', async ()=>{
+    const q = document.getElementById('m1-query').value.trim();
+    const out = document.getElementById('m1-results');
+    out.innerHTML = '<div class="text-muted">查询中...</div>';
+    try{
+      const r = await callModel('/models/api/model1', q);
+      renderResults(out, r.results || []);
+    }catch(e){
+      out.innerHTML = `<div class="text-danger">${e.message}</div>`;
+    }
+  });
+
+  document.getElementById('m2-run').addEventListener('click', async ()=>{
+    const q = document.getElementById('m2-query').value.trim();
+    const out = document.getElementById('m2-results');
+    out.innerHTML = '<div class="text-muted">查询中...</div>';
+    try{
+      const r = await callModel('/models/api/model2', q);
+      renderResults(out, r.results || []);
+    }catch(e){
+      out.innerHTML = `<div class="text-danger">${e.message}</div>`;
+    }
+  });
+
+  document.getElementById('m3-run').addEventListener('click', async ()=>{
+    const q = document.getElementById('m3-query').value.trim();
+    const out = document.getElementById('m3-results');
+    out.innerHTML = '<div class="text-muted">查询中...</div>';
+    try{
+      const r = await callModel('/models/api/model3', q);
+      renderResults(out, r.results || []);
+    }catch(e){
+      out.innerHTML = `<div class="text-danger">${e.message}</div>`;
+    }
+  });
+});
+</script>
+
+{% endblock %}

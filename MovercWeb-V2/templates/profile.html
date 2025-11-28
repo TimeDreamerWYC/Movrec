@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}我的资料{% endblock %}
+{% block content %}
+<h2>{{ current_user.username }} 的资料</h2>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <h5 class="card-title">有兴趣的电影</h5>
+    {% set liked_count = current_user.liked_movies.count() %}
+    <p>已标记 {{ liked_count }} 部电影 <a href="{{ url_for('liked_movies') }}">查看列表 →</a></p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h5 class="card-title">不喜欢的电影</h5>
+    {% set disliked_count = current_user.disliked_movies.count() %}
+    <p>已标记 {{ disliked_count }} 部电影 <a href="{{ url_for('disliked_movies') }}">查看列表 →</a></p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}演员检索{% endblock %}
+{% block content %}
+<h2>演员检索</h2>
+<form method="get">
+  <div class="input-group mb-3">
+    <input type="text" class="form-control" name="query" value="{{ query or '' }}" placeholder="输入演员姓名">
+    <button class="btn btn-outline-secondary" type="submit">搜索</button>
+  </div>
+</form>
+
+{% if result %}
+  <h3>直接匹配演员词条</h3>
+  {% if result.direct %}
+    <ul>
+      {% for actor in result.direct %}
+        <li><a href="{{ url_for('actor_detail', name=actor) }}">{{ actor }}</a></li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>无直接匹配演员。</p>
+  {% endif %}
+
+  {% if result.fuzzy %}
+    <h3>模糊匹配推荐</h3>
+    <p>最相似演员：<a href="{{ url_for('actor_detail', name=result.fuzzy) }}">{{ result.fuzzy }}</a></p>
+  {% endif %}
+{% endif %}
+{% endblock %}

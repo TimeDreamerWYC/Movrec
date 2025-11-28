@@ -1,0 +1,142 @@
+<!-- templates/liked_movies.html -->
+{% extends "base.html" %}
+
+{% block title %}有兴趣的电影{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>有兴趣的电影 (共 {{ total_count }} 部)</h2>
+
+    {% if movies %}
+    <div class="row">
+        {% for movie in movies %}
+        <div class="col-md-4 col-sm-6 mb-4">
+            <div class="card h-100">
+                <div style="width:100%; height:260px; background:#f5f7f9; display:flex; align-items:center; justify-content:center;">
+                    <img src="{{ poster_url(movie) }}" class="card-img-top" alt="{{ movie.NAME }}" style="max-width:100%; max-height:100%; object-fit:contain;">
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">
+                        {% if movie.MOVIE_ID %}
+                            <a href="https://movie.douban.com/subject/{{ movie.MOVIE_ID }}/?_dtcc=1" target="_blank" rel="noopener">{{ movie.NAME or '未知' }}</a>
+                        {% else %}
+                            <a href="{{ url_for('movie_detail', movie_douban_id=movie.MOVIE_ID) }}">{{ movie.NAME or '未知' }}</a>
+                        {% endif %}
+                    </h5>
+                    <p class="card-text text-muted">{{ movie.YEAR|int if movie.YEAR else '' }}</p>
+                    <p class="card-text small">
+                        <strong>评分：</strong> {{ movie.DOUBAN_SCORE or 'N/A' }}
+                    </p>
+                    <p class="card-text small">
+                        <strong>导演：</strong>
+                        {% if movie.DIRECTORS %}
+                            {% if movie.DIRECTORS is string %}
+                                {{ movie.DIRECTORS[:30] }}{% if movie.DIRECTORS|length > 30 %}...{% endif %}
+                            {% else %}
+                                {{ movie.DIRECTORS }}
+                            {% endif %}
+                        {% else %}
+                            未知
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="card-footer bg-white">
+                    <div class="d-flex justify-content-start">
+                        <button class="btn btn-sm btn-danger remove-movie" data-movie-id="{{ movie.MOVIE_ID }}">移除</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 分页控件 -->
+    {% if total_pages > 1 %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('liked_movies', page=1) }}">首页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('liked_movies', page=page-1) }}">上一页</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">首页</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">上一页</span>
+                </li>
+            {% endif %}
+
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ p }}</span>
+                    </li>
+                {% elif p >= page - 2 and p <= page + 2 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('liked_movies', page=p) }}">{{ p }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('liked_movies', page=page+1) }}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('liked_movies', page=total_pages) }}">末页</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">下一页</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">末页</span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <p class="text-muted">还没有感兴趣的电影，<a href="{{ url_for('index') }}">去浏览电影</a>。</p>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const removeButtons = document.querySelectorAll('.remove-movie');
+    removeButtons.forEach(btn => {
+        btn.addEventListener('click', async function () {
+            const movieId = this.dataset.movieId;
+            if (!confirm('确认移除此电影？')) return;
+
+            try {
+                const response = await fetch('{{ url_for("toggle_preference_optimized") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ movie_douban_id: movieId, action: 'like' })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    // 移除该卡片
+                    this.closest('.col-md-4').remove();
+                    location.reload(); // 简单重新加载以更新计数
+                } else {
+                    alert('移除失败');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('网络错误');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

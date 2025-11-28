@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}电影推荐{% endblock %}
+{% block content %}
+<h2>电影推荐</h2>
+
+<form method="get" class="mb-4">
+  <div class="input-group">
+    <input type="text" class="form-control" name="query" value="{{ query or '' }}" placeholder="输入电影名称">
+    <button class="btn btn-primary" type="submit">搜索</button>
+  </div>
+</form>
+
+{% if guess_query %}
+  <div class="alert alert-info">猜你想搜：{{ guess_query }}</div>
+{% endif %}
+
+{% if recommendations is not none %}
+  {% if engine_status == "initializing" %}
+    <div class="alert alert-warning">推荐引擎正在初始化，这可能需要 30-60 秒（首次运行）。请稍候...</div>
+  {% elif recommendations.empty %}
+    <div class="alert alert-info">抱歉，没有找到相关推荐。请尝试其他电影名。</div>
+  {% else %}
+    <h3>为您推荐:</h3>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>电影名称</th>
+          <th>导演</th>
+          <th>豆瓣ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rec in recommendations.to_dict(orient='records') %}
+          {% set mid = rec.get('MOVIE_ID') or '' %}
+          <tr>
+            <td>
+              {% if mid %}
+                <a href="{{ url_for('movie_detail', movie_id=mid) }}">{{ rec['电影名'] }}</a>
+              {% else %}
+                {{ rec['电影名'] }}
+              {% endif %}
+            </td>
+            <td>{{ rec.get('导演', '未知') }}</td>
+            <td>{{ mid }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="alert alert-info">
+      <strong>补充：</strong>
+      <ul>
+        <li>提交反馈后相关按钮会显示“已记录”并可撤销（点击“撤销”会从后端删除最近一次该条目的反馈并恢复按钮状态）。</li>
+        <li>与“喜欢/不喜欢”按钮的区别：“喜欢/不喜欢”是对个人偏好的直接标记，通常立即影响用户偏好档案与推荐排序；而上方三按钮是对推荐结果质量的评价，主要用于提升模型的推荐质量与训练数据。</li>
+      </ul>
+    </div>
+  {% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,122 @@
+<!-- templates/index.html -->
+
+{% extends "base.html" %}
+
+{% block title %}首页{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- 原有的欢迎信息 -->
+        <div class="jumbotron">
+            <h1 id="welcome-msg" class="display-4"></h1>
+            <p class="lead">发现下一部你喜欢的电影。</p>
+            <script>
+                (function(){
+                    const lines = [
+                        "欢迎来到这里，愿每一次点击都是一场惊喜的旅程",
+                        "感谢光临，愿在影片中发现新的感动与热爱",
+                        "打开心扉，让电影带往未知，也带回自身",
+                        "在这里，每一部影片都是一盏温暖的灯，照亮世界",
+                        "欢迎光临，愿好片伴良心情，电影与共",
+                        "暂借光影相迎，愿在此找到属于片刻精彩",
+                        "每一次观影，都是一次心灵的旅行，欢迎启程",
+                        "欢迎来到，无论路途远近，这里始终保留一席之地",
+                        "来吧，让电影的世界打开一扇窗，见更广阔天地",
+                        "感谢来到这里，愿眼睛明亮如晨、心中热烈如影",
+                        "欢迎踏入影像天地，一同探索光影中的美好",
+                        "感谢光临此处，愿每部影片皆成回忆中的光点",
+                        "在电影的海洋中航行，愿每一片段都澄澈而纯粹",
+                        "投身画面之中，愿发现属于自己的那一幕",
+                        "欢迎光显至此，愿瞬间成为永恒",
+                        "走进影幕深处，与世界对话，与心灵相遇",
+                        "感谢抵达此地，愿视界因影片而宽广",
+                        "在这里沉浸于故事，愿心海掀起温柔浪潮",
+                        "欢迎到达影物世界，愿光影伴随每一次呼吸",
+                        "感谢加入影旅，愿下一部影片成为新的出发",
+                        "影像如梦，愿此刻成为清醒中的温柔",
+                        "融入光影节拍，愿节拍唤醒内心沉睡的热忱",
+                        "欢迎来到光与影的交汇处，共享此刻静好",
+                        "感谢驻足此间，愿每一幕都触及心房最深处",
+                        "投身于银幕之旅，愿影像带来思考与触动",
+                        "欢迎探索每一个故事深处，愿感动无声却深远",
+                        "感谢选择此地，愿影像成为疗愈时光的良药",
+                        "在影幕推进中，愿观影成为一次心灵对话",
+                        "欢迎踏上光影征途，愿每一次“播放”皆为惊喜",
+                        "感谢到来，愿心中留下一帧帧温暖画面",
+                        "从此刻起，影像与心同行，愿旅程悠然精彩",
+                        "欢迎进入电影世界的门扉，希望故事成为温柔陪伴",
+                        "感谢加入观影行列，愿片中之光照亮心中阴影",
+                        "在这里停留片刻，愿影片点亮做梦的勇气",
+                        "欢迎来到影像之家，愿放映属于自己的光辉篇章",
+                        "感谢赐予此刻光景，愿每一部影片皆为珍宝",
+                        "影像铺展如画卷，愿阅读其中，收获心灵的丰盈",
+                        "欢迎驻足光影之间，愿故事唤醒沉睡的灵感",
+                        "感谢来到此处，愿观影成为日常中的仪式感",
+                        "在这里，影片与心灵相遇，愿每一次播放皆生花"
+                    ];
+                    const el = document.getElementById('welcome-msg');
+                    if (el) {
+                        el.textContent = lines[Math.floor(Math.random() * lines.length)];
+                    }
+                })();
+            </script>
+      
+      {% if current_user.is_authenticated %}
+        <hr class="my-4">
+        <p>点击下方按钮开始探索。</p>
+        <a class="btn btn-primary btn-lg" href="{{ url_for('recommend') }}" role="button">开始推荐</a>
+      {% else %}
+        <hr class="my-4">
+        <p>请先登录或注册以获得个性化推荐。</p>
+        <a class="btn btn-primary btn-lg" href="{{ url_for('login') }}" role="button">登录</a>
+        <a class="btn btn-secondary btn-lg" href="{{ url_for('register') }}" role="button">注册</a>
+      {% endif %}
+    </div>
+
+    <!-- 新增：电影列表部分 -->
+    {% if movies %}
+        <h2 class="mb-3">热门电影</h2>
+        <div class="row">
+            {% for movie in movies %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                                <div style="width:100%; height:360px; background:#f5f7f9; display:flex; align-items:center; justify-content:center;">
+                                    <img src="{{ poster_url(movie) }}" class="card-img-top" alt="{{ movie.NAME }} Poster" style="max-width:100%; max-height:100%; object-fit:contain;">
+                                </div>
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">
+                                {% if movie.MOVIE_ID %}
+                                    <a href="https://movie.douban.com/subject/{{ movie.MOVIE_ID }}/?_dtcc=1" target="_blank" rel="noopener">{{ movie.NAME }}</a>
+                                {% else %}
+                                    <a href="{{ url_for('movie_detail', movie_douban_id=movie.MOVIE_ID|string) }}">{{ movie.NAME }}</a>
+                                {% endif %}
+                            </h5>
+                            <p class="card-text"><small class="text-muted">{{ movie.YEAR|int if movie.YEAR else '' }}{% if movie.GENRES %} | {{ movie.GENRES }}{% endif %}</small></p> <!-- 确认 YEAR, GENRES 列存在 -->
+                            <!-- 显示导演信息（替换原来的简介），支持多种列名 -->
+                            {% set directors = movie.DIRECTORS or movie.DIRECTOR or movie.director or movie.get('DIRECTORS') or movie.get('导演') or movie.get('directors') or '未知' %}
+                            <p class="card-text flex-grow-1"><strong>导演：</strong>
+                                {% if directors and directors != '未知' %}
+                                    {% if directors is string %}
+                                        {{ directors[:60] }}{% if directors|length > 60 %}...{% endif %}
+                                    {% else %}
+                                        {{ directors }}
+                                    {% endif %}
+                                {% else %}
+                                    未知
+                                {% endif %}
+                            </p>
+                            <!-- --- 修改结束 --- -->
+                            <!-- --- 同时修正 url_for 的问题，强制转换为字符串 --- -->
+                            <!-- 已移除“查看详情”按钮，标题已直接链接到豆瓣，避免跳转到站内详情页面错误 -->
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            目前没有可显示的电影列表。
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

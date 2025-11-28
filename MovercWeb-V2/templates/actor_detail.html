@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h2>演员：{{ actor_name }}</h2>
+  <h4>参演电影列表</h4>
+  {% if movies %}
+    <ul>
+      {% for movie in movies %}
+        <li>
+          <a href="{{ url_for('movie_detail', movie_douban_id=movie['MOVIE_ID']) }}">{{ movie['NAME'] }}</a>
+          {% if movie['YEAR'] %} ({{ movie['YEAR'] }}){% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>暂无参演电影数据。</p>
+  {% endif %}
+  <a href="{{ url_for('search_actor') }}" class="btn btn-secondary mt-3">返回演员检索</a>
+</div>
+{% endblock %}
