@@ -1458,6 +1458,14 @@ def models_api_model3():
     except Exception as e:
         print(f"[ERROR] model3 failed: {e}")
         return jsonify({'error': '模型3调用失败'}), 500
+    
+@app.route('/health')
+def health_check():
+    return {
+        "status": "success",
+        "message": "Service is running",
+        "engine_ready": True
+    }, 200
 
 if __name__ == '__main__':
     # 确保 instance 文件夹存在
